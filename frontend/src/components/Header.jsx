@@ -1,7 +1,7 @@
 import React from 'react';
-import { Share2 } from 'lucide-react'; // Make sure to import the Share icon
+import { Share2 } from 'lucide-react';
 
-const Header = () => (
+const Header = ({ user, handleLogout }) => (
   <header className="header">
     <div className="container">
       <div className="header-content">

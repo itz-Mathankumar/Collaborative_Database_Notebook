@@ -51,7 +51,6 @@ const Notebook = () => {
 
   return (
     <div>
-      <Header />
       <div className="container">
         <main className="notebook">
           {cells.map((cell, index) => (

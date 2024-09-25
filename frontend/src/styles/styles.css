@@ -258,3 +258,237 @@ pre {
   background-color: #2563eb;
 }
 
+/* Base styling */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  line-height: 1.5;
+  color: #333;
+  background-color: #f3f4f6;
+}
+
+.app-container {
+  display: flex;
+}
+
+/* Sidebar */
+.sidebar {
+  width: 200px;
+  background-color: #ffffff;
+  border-right: 1px solid #e5e7eb;
+  padding: 1rem;
+}
+
+.sidebar h2 {
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.sidebar ul {
+  list-style: none;
+  padding: 0;
+}
+
+.sidebar li {
+  margin-bottom: 1rem;
+}
+
+.sidebar a,
+.sidebar button {
+  text-decoration: none;
+  color: #3b82f6;
+  font-weight: 500;
+}
+
+/* Main Content */
+.main-content {
+  flex: 1;
+  padding: 1rem;
+}
+
+/* Form Styles */
+.form-container {
+  max-width: 400px;
+  margin: auto;
+  padding: 2rem;
+  background-color: #fff;
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.form-container h2 {
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.form-container input {
+  width: 100%;
+  padding: 0.5rem;
+  margin-bottom: 1rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.375rem;
+}
+
+.btn-primary {
+  width: 100%;
+  padding: 0.5rem;
+  background-color: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 0.375rem;
+  cursor: pointer;
+}
+
+.btn-primary:hover {
+  background-color: #2563eb;
+}
+
+/* Alerts */
+.alert {
+  padding: 1rem;
+  margin-bottom: 1rem;
+  border-radius: 0.375rem;
+}
+
+.alert-error {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+.alert-success {
+  background-color: #d1fae5;
+  color: #065f46;
+}
+
+/* Sidebar Styles */
+.sidebar {
+  width: 200px; /* Adjust as needed */
+  background-color: #ffffff;
+  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+  padding: 1rem;
+  position: fixed; /* Make it fixed */
+  height: 100%;
+}
+
+.sidebar h2 {
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.sidebar ul {
+  list-style-type: none;
+  padding: 0;
+}
+
+.sidebar li {
+  margin: 0.5rem 0;
+}
+
+.sidebar a {
+  text-decoration: none;
+  color: #3b82f6; /* Blue color for links */
+  font-weight: 500;
+}
+
+.sidebar a:hover {
+  text-decoration: underline;
+}
+
+/* Content Styles */
+.app-container {
+  display: flex;
+  margin-left: 200px; /* Adjust to sidebar width */
+}
+
+.content {
+  flex: 1; /* Take the remaining space */
+  padding: 1rem;
+}
+
+
+/* Sidebar */
+.sidebar {
+  width: 200px; /* Fixed width for the sidebar */
+  background-color: #ffffff; /* White background for contrast */
+  border-right: 1px solid #d1d5db; /* Light border for separation */
+  padding: 1rem;
+  position: fixed; /* Keep sidebar fixed on the left */
+  height: 100vh; /* Full height */
+  top: 0; /* Align to the top */
+  left: 0; /* Align to the left */
+  overflow-y: auto; /* Enable scrolling if content overflows */
+}
+
+.sidebar h2 {
+  margin-bottom: 1rem;
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #1f2937; /* Darker text color */
+}
+
+.sidebar ul {
+  list-style-type: none;
+  padding: 0;
+}
+
+.sidebar ul li {
+  margin-bottom: 1rem;
+}
+
+.sidebar a {
+  color: #3b82f6; /* Primary color for links */
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.sidebar a:hover {
+  text-decoration: underline;
+}
+
+/* Styles for buttons in Login and Register components */
+.btn-login,
+.btn-register {
+  background-color: #3b82f6; /* Primary color for buttons */
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  display: inline-block; /* Ensure buttons are inline block */
+}
+
+.btn-login:hover,
+.btn-register:hover {
+  background-color: #2563eb; /* Darker shade on hover */
+}
+
+/* Logout button */
+.btn-logout {
+  background-color: #ef4444; /* Red for logout */
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  display: inline-block; /* Ensure button is inline block */
+}
+
+.btn-logout:hover {
+  background-color: #dc2626; /* Darker red on hover */
+}
+
+/* Ensure layout allows for the sidebar */
+.container {
+  margin-left: 220px; /* Adjust for sidebar width + padding */
+  padding: 0 1rem; /* Padding for main content */
+}
+
