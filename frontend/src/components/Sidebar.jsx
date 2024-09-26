@@ -21,11 +21,11 @@ const Sidebar = ({ user, handleLogout, notebooks, onDeleteNotebook, onCreateNote
           <>
             <li><Link to="/notebooks">Home</Link></li>
             {notebooks.map(notebook => (
-              <li key={notebook.id} className="notebook-item">
-                <Link to={`/notebook/${notebook.id}`}>{notebook.name}</Link>
+              <li key={notebook._id} className="notebook-item">
+                <Link to={`/notebook/${notebook._id}`}>{notebook.title}</Link>
                 <button 
                   className="delete-notebook" 
-                  onClick={() => onDeleteNotebook(notebook.id)}
+                  onClick={() => onDeleteNotebook(notebook._id)}
                 >
                   <X size={16} />
                 </button>
@@ -44,7 +44,6 @@ const Sidebar = ({ user, handleLogout, notebooks, onDeleteNotebook, onCreateNote
                 </button>
               </form>
             </li>
-            <li><button className="btn-logout" onClick={handleLogout}>Logout</button></li>
           </>
         ) : (
           <>

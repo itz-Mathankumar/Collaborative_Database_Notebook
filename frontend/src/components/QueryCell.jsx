@@ -1,30 +1,28 @@
 import React, { useState } from 'react';
-import { AlertCircle, CheckCircle, ChevronDown, ChevronUp, Trash2, Edit3, Play, Save } from 'lucide-react';
+import { AlertCircle, CheckCircle, Trash2, Edit3, Play, Save } from 'lucide-react';
 
-const QueryCell = ({ cell, index, onDelete, onUpdate, onExecute, onMoveUp, onMoveDown }) => {
+const QueryCell = ({ cell, onDelete, onUpdate, onExecute }) => {
   const [editing, setEditing] = useState(false);
-  const [query, setQuery] = useState(cell.query);
+  const [content, setContent] = useState(cell.content);
 
   const handleSave = () => {
     setEditing(false);
-    onUpdate(cell.id, query);
+    onUpdate(cell._id, content);
   };
 
   return (
     <div className="cell">
       <div className="cell-header">
-        <span className="cell-number">Cell {index + 1}</span>
+        <span className="cell-number">Cell {cell._id}</span>
         <div className="cell-controls">
-          <button onClick={onMoveUp}><ChevronUp size={16} /></button>
-          <button onClick={onMoveDown}><ChevronDown size={16} /></button>
-          <button onClick={() => onDelete(cell.id)}><Trash2 size={16} /></button>
+          <button onClick={() => onDelete(cell._id)}><Trash2 size={16} /></button>
         </div>
       </div>
       {editing ? (
         <div>
           <textarea
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
             rows="4"
           />
           <div className="cell-actions">
@@ -36,9 +34,9 @@ const QueryCell = ({ cell, index, onDelete, onUpdate, onExecute, onMoveUp, onMov
         </div>
       ) : (
         <div>
-          <pre>{query || "No query entered."}</pre>
+          <pre>{content || "No query entered."}</pre>
           <div className="cell-actions">
-            <button className="btn btn-primary" onClick={() => onExecute(cell.id, query)}>
+            <button className="btn btn-primary" onClick={() => onExecute(cell._id, content)}>
               <Play size={16} />
               Run
             </button>

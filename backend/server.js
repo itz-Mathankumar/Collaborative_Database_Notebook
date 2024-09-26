@@ -47,6 +47,25 @@ const startServer = (port) => {
   });
 };
 
+const authenticateJWT = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+
+  if (authHeader) {
+    const token = authHeader.split(' ')[1];
+
+    jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+      if (err) {
+        return res.status(403).json({ message: 'Invalid token' });
+      }
+      req.user = user;
+      console.log(user)
+      next();
+    });
+  } else {
+    return res.status(401).json({ message: 'No token provided' });
+  }
+};
+
 // Connect to MongoDB before starting the server
 connectToMongoDB().then(() => {
   startServer(PORT);
@@ -56,26 +75,25 @@ connectToMongoDB().then(() => {
 const userSchema = new mongoose.Schema({
   username: { type: String, required: true, unique: true },
   password: { type: String, required: true },
-  notebooks: [{ id: String, title: String }] // Array of notebooks
+  notebooks: [{ id: String, title: String }]
 });
 
 const User = mongoose.model('User', userSchema);
 
 // Cell schema
 const cellSchema = new mongoose.Schema({
-  content: { type: String, required: true },
-  // Add other properties related to the cell, e.g., type (text, image, etc.)
+  _id: { type: mongoose.Schema.Types.ObjectId, auto: true },
+  content: { type: String, required: false }
 });
 
 const notebookSchema = new mongoose.Schema({
   title: { type: String, required: true },
-  cells: [{ type: Object }],
+  cells: [cellSchema],
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-  sharedWith: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }] // Ensure this is present
+  sharedWith: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }]
 });
 
 const Notebook = mongoose.model('Notebook', notebookSchema);
-
 
 // Register new user
 app.post('/register', async (req, res) => {
@@ -107,7 +125,7 @@ app.post('/login', async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(400).json({ message: 'Invalid credentials' });
 
-    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '21h' });
     res.json({ token, userId: user._id });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -115,8 +133,9 @@ app.post('/login', async (req, res) => {
 });
 
 // Create a new notebook
-app.post('/create-notebook', async (req, res) => {
-  const { userId, title } = req.body;
+app.post('/create-notebook', authenticateJWT, async (req, res) => {
+  const { title } = req.body;
+  const userId = req.user.userId;
 
   console.log(`Received request to create a new notebook with title: "${title}" for user ID: ${userId}`);
 
@@ -127,7 +146,7 @@ app.post('/create-notebook', async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    console.log(`Creating new notebook for user: ${user.username}`); // Assuming user has a username field
+    console.log(`Creating new notebook for user: ${user.username}`);
 
     const newNotebook = new Notebook({ title, cells: [], userId: user._id });
     await newNotebook.save();
@@ -141,23 +160,43 @@ app.post('/create-notebook', async (req, res) => {
 
     res.status(201).json({ message: 'Notebook created', notebookId: newNotebook._id });
   } catch (error) {
-    console.error('Error creating notebook:', error.message); // Log the error message
+    console.error('Error creating notebook:', error.message);
     res.status(500).json({ message: error.message });
   }
 });
 
-
-// Add a new cell to a notebook
-app.post('/notebooks/:notebookId/cells', async (req, res) => {
-  const { userId, content } = req.body; // Assume you get userId from the request
+// Fetch all cells of a notebook
+app.get('/notebooks/:notebookId/cells', authenticateJWT, async (req, res) => {
   const { notebookId } = req.params;
+  const userId = req.user.userId;
 
   try {
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: 'User not found' });
 
     const notebook = await Notebook.findById(notebookId);
-    if (!notebook || !notebook.userId.equals(userId)) {
+    if (!notebook || (!notebook.userId.equals(userId) && !notebook.sharedWith.includes(userId))) {
+      return res.status(404).json({ message: 'Notebook not found or access denied' });
+    }
+
+    res.status(200).json({ message: 'Cells fetched', cells: notebook.cells });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Add a new cell to a notebook
+app.post('/notebooks/:notebookId/cells', authenticateJWT, async (req, res) => {
+  const { content } = req.body;
+  const { notebookId } = req.params;
+  const userId = req.user.userId;
+
+  try {
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    const notebook = await Notebook.findById(notebookId);
+    if (!notebook || (!notebook.userId.equals(userId) && !notebook.sharedWith.includes(userId))) {
       return res.status(404).json({ message: 'Notebook not found or access denied' });
     }
 
@@ -165,66 +204,74 @@ app.post('/notebooks/:notebookId/cells', async (req, res) => {
     notebook.cells.push(newCell);
     await notebook.save();
 
-    res.status(201).json({ message: 'Cell added', cell: newCell });
+    res.status(201).json({ message: 'Cell added', cell: notebook.cells[notebook.cells.length - 1] });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 });
 
 // Update a cell in a notebook
-app.put('/notebooks/:notebookId/cells/:cellId', async (req, res) => {
-  const { userId, content } = req.body; // Assume you get userId from the request
+app.put('/notebooks/:notebookId/cells/:cellId', authenticateJWT, async (req, res) => {
+  const { content } = req.body;
   const { notebookId, cellId } = req.params;
+  const userId = req.user.userId;
 
   try {
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: 'User not found' });
 
     const notebook = await Notebook.findById(notebookId);
-    if (!notebook || !notebook.userId.equals(userId)) {
+    if (!notebook || (!notebook.userId.equals(userId) && !notebook.sharedWith.includes(userId))) {
       return res.status(404).json({ message: 'Notebook not found or access denied' });
-    }
+    } 
 
     const cell = notebook.cells.id(cellId);
     if (!cell) return res.status(404).json({ message: 'Cell not found' });
 
-    cell.content = content; // Update cell content
+    cell.content = content;
     await notebook.save();
 
     res.status(200).json({ message: 'Cell updated', cell });
   } catch (error) {
+    console.error('Error updating cell:', error);
     res.status(500).json({ message: error.message });
   }
 });
 
-// Delete a notebook
-app.delete('/notebooks/:notebookId', async (req, res) => {
-  const { userId } = req.body; // Assume you get userId from the request
-  const { notebookId } = req.params;
+// Delete a cell from a notebook
+app.delete('/notebooks/:notebookId/cells/:cellId', authenticateJWT, async (req, res) => {
+  const { notebookId, cellId } = req.params;
+  const userId = req.user.userId;
 
   try {
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: 'User not found' });
 
     const notebook = await Notebook.findById(notebookId);
-    if (!notebook || !notebook.userId.equals(userId)) {
+    if (!notebook || (!notebook.userId.equals(userId) && !notebook.sharedWith.includes(userId))) {
       return res.status(404).json({ message: 'Notebook not found or access denied' });
     }
 
-    await Notebook.deleteOne({ _id: notebookId });
-    user.notebooks = user.notebooks.filter(notebook => !notebook.id.equals(notebookId));
-    await user.save();
+    console.log(notebook.cells, cellId)
 
-    res.status(200).json({ message: 'Notebook deleted' });
+    const cellIndex = notebook.cells.findIndex(cell => cell._id.toString() === cellId);
+    if (cellIndex === -1) return res.status(404).json({ message: 'Cell not found' });
+
+    notebook.cells.splice(cellIndex, 1);
+    await notebook.save();
+
+    res.status(200).json({ message: 'Cell deleted' });
   } catch (error) {
+    console.error('Error deleting cell:', error);
     res.status(500).json({ message: error.message });
   }
 });
 
 // Share a notebook with another user by username
-app.post('/notebooks/:notebookId/share', async (req, res) => {
-  const { userId, username } = req.body; // Assume you get userId and username from the request
+app.post('/notebooks/:notebookId/share', authenticateJWT, async (req, res) => {
+  const { username } = req.body; // Assume you get userId and username from the request
   const { notebookId } = req.params;
+  const userId = req.user.userId;
 
   try {
     const user = await User.findById(userId);
@@ -252,8 +299,8 @@ app.post('/notebooks/:notebookId/share', async (req, res) => {
 });
 
 // Get notebooks for a specific user (owned and shared)
-app.get('/notebooks/:userId', async (req, res) => {
-  const { userId } = req.params;
+app.get('/notebooks/:userId', authenticateJWT, async (req, res) => {
+  const userId = req.user.userId;
 
   try {
     const user = await User.findById(userId).populate({
@@ -278,24 +325,36 @@ app.get('/notebooks/:userId', async (req, res) => {
 });
 
 
-// Get all notebooks shared with a specific user
-app.get('/notebooks/shared/:userId', async (req, res) => {
-  const { userId } = req.params;
+// Delete a notebook
+app.delete('/notebooks/:notebookId', authenticateJWT, async (req, res) => {
+  const { notebookId } = req.params;
 
   try {
-    const user = await User.findById(userId).populate('notebooks.sharedWith');
+    const userId = req.user.userId; // Get the userId from the decoded JWT (attached by the middleware)
+
+    // Fetch the user by userId
+    const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: 'User not found' });
 
-    // Filter notebooks that are shared with this user
-    const sharedNotebooks = await Notebook.find({ sharedWith: user._id }).populate('userId');
+    // Fetch the notebook by notebookId
+    const notebook = await Notebook.findById(notebookId);
+    if (!notebook || !notebook.userId.equals(userId)) {
+      return res.status(404).json({ message: 'Notebook not found or access denied' });
+    }
 
-    res.json({ notebooks: sharedNotebooks });
+    // Delete the notebook and update the user's notebooks array
+    await Notebook.deleteOne({ _id: notebookId });
+    user.notebooks = user.notebooks.filter(notebook => !notebook.id.equals(notebookId));
+    await user.save();
+
+    res.status(200).json({ message: 'Notebook deleted' });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 });
 
-app.post('/execute-query', async (req, res) => {
+
+app.post('/execute-query', authenticateJWT, async (req, res) => {
   const { command } = req.body;
 
   if (!command) {
