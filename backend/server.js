@@ -368,6 +368,9 @@ app.post('/execute-query', authenticateJWT, async (req, res) => {
   try {
       const parts = command.split('.');
       const collectionName = parts[1];
+      if (collectionName === "users") {
+        return res.status(500).json({ output: 'Access to users collection is not allowed.', status: 'Fail' });
+      }
       let operation = parts[2];
       const argsStringMatch = command.match(/\(([\s\S]*?)\)/);
       let args = [];
