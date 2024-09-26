@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { Plus, Share2 } from 'lucide-react';
 import QueryCell from './QueryCell';
+import { mongoDBExecution } from '../utils/mongoDBExecution'; // Import the execution function
 
 const Notebook = ({ notebooks, onUpdateNotebook }) => {
   const { id } = useParams();
@@ -17,7 +18,7 @@ const Notebook = ({ notebooks, onUpdateNotebook }) => {
       const newCell = {
         id: Date.now(),
         query: '',
-        result: null
+        result: null,
       };
       const updatedCells = [...notebook.cells, newCell];
       const updatedNotebook = { ...notebook, cells: updatedCells };
@@ -28,7 +29,7 @@ const Notebook = ({ notebooks, onUpdateNotebook }) => {
 
   const handleDeleteCell = (cellId) => {
     if (notebook) {
-      const updatedCells = notebook.cells.filter(cell => cell.id !== cellId);
+      const updatedCells = notebook.cells.filter((cell) => cell.id !== cellId);
       const updatedNotebook = { ...notebook, cells: updatedCells };
       setNotebook(updatedNotebook);
       onUpdateNotebook(updatedNotebook);
@@ -37,7 +38,7 @@ const Notebook = ({ notebooks, onUpdateNotebook }) => {
 
   const handleUpdateCell = (cellId, newQuery) => {
     if (notebook) {
-      const updatedCells = notebook.cells.map(cell => 
+      const updatedCells = notebook.cells.map((cell) =>
         cell.id === cellId ? { ...cell, query: newQuery } : cell
       );
       const updatedNotebook = { ...notebook, cells: updatedCells };
@@ -46,10 +47,22 @@ const Notebook = ({ notebooks, onUpdateNotebook }) => {
     }
   };
 
-  const handleExecuteCell = (cellId, query) => {
-    if (notebook) {
-      const updatedCells = notebook.cells.map(cell => 
-        cell.id === cellId ? { ...cell, result: { status: 'Pass', output: 'Query executed successfully' } } : cell
+  const handleExecuteCell = async (cellId, query) => {
+    try {
+      // Call the MongoDB execution function and get the response
+      const result = await mongoDBExecution(query);
+      
+      // Update the notebook with the result from the MongoDB execution
+      const updatedCells = notebook.cells.map((cell) =>
+        cell.id === cellId ? { ...cell, result: { status: 'Pass', output: result } } : cell
+      );
+      const updatedNotebook = { ...notebook, cells: updatedCells };
+      setNotebook(updatedNotebook);
+      onUpdateNotebook(updatedNotebook);
+    } catch (error) {
+      // In case of an error, update the cell with the error message
+      const updatedCells = notebook.cells.map((cell) =>
+        cell.id === cellId ? { ...cell, result: { status: 'Fail', output: error.message } } : cell
       );
       const updatedNotebook = { ...notebook, cells: updatedCells };
       setNotebook(updatedNotebook);
@@ -91,7 +104,7 @@ const Notebook = ({ notebooks, onUpdateNotebook }) => {
         </button>
       </div>
       {notebook.cells.map((cell, index) => (
-        <QueryCell 
+        <QueryCell
           key={cell.id}
           cell={cell}
           index={index}

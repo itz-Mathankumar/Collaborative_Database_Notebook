@@ -103,60 +103,55 @@ app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
 
+
+
+
+
 app.post('/execute-query', async (req, res) => {
   const { command } = req.body;
 
+  if (!command) {
+    return res.status(400).json({ output: 'Command is required', status: 'Fail' });
+  }
+
   try {
-    const collectionName = 'users'; // Define your collection name
+    const db = mongoose.connection.db; // Get the native MongoDB driver db instance
 
-    // Check if the command is a find operation
-    if (command.startsWith(`db.${collectionName}.find`)) {
-      const queryMatch = command.match(/db\.users\.find\((.*?)\)/);
-      let result;
-
-      if (queryMatch && queryMatch[1]) {
-        const queryString = queryMatch[1].trim();
-        let jsonQuery;
-
-        // Convert to valid JSON for the MongoDB query
-        if (queryString === "") {
-          jsonQuery = {}; // No filter means return all
-        } else {
-          // Modify the query string to ensure it's valid JSON
-          const modifiedQueryString = queryString.replace(/([a-zA-Z0-9_]+):/g, '"$1":');
-          jsonQuery = JSON.parse(modifiedQueryString);
-        }
-
-        // Use the User model to query the MongoDB collection
-        result = await User.find(jsonQuery);
-      } else {
-        result = await User.find(); // Return all documents if no query
-      }
-
-      res.json({ output: result, status: 'Pass' });
-    
-    // Allow raw command execution
-    } else if (command.startsWith('db.command')) {
-      // Remove "db.command" prefix for parsing
-      const rawCommand = command.replace('db.command', '').trim();
-
-      // Convert to an object for MongoDB command
-      let commandObject;
-      try {
-        commandObject = JSON.parse(rawCommand); // Assuming the command is sent as JSON
-      } catch (err) {
-        return res.status(400).json({ output: 'Invalid command format', status: 'Fail' });
-      }
-
-      // Execute the command
-      const db = mongoose.connection.db; // Get the native MongoDB driver db instance
-      const result = await db.command(commandObject);
-      res.json({ output: result, status: 'Pass' });
-
-    } else {
-      return res.status(400).json({ output: 'Invalid command', status: 'Fail' });
+    // Ensure the command starts with "db."
+    if (!command.startsWith("db.")) {
+      return res.status(400).json({ output: 'Invalid command format', status: 'Fail' });
     }
 
+    // Extract the collection name and operation
+    const commandParts = command.split('.');
+    const collectionName = commandParts[1]; // Get the collection name
+    const operation = commandParts.slice(2).join('.'); // Get the rest of the command
+
+    let result;
+
+    // Handle find operation
+    if (operation.startsWith('find')) {
+      const queryMatch = operation.match(/find\((.*?)\)/);
+      const queryString = queryMatch ? queryMatch[1].trim() : '{}';
+
+      let jsonQuery = {};
+      try {
+        // Ensure valid JSON format
+        if (queryString === "") {
+          jsonQuery = {}; // Return all documents if no filter
+        } else {
+          jsonQuery = JSON.parse(queryString.replace(/([a-zA-Z0-9_]+):/g, '"$1":')); // Convert to valid JSON
+        }
+      } catch (err) {
+        return res.status(400).json({ output: 'Invalid query format', status: 'Fail' });
+      }
+
+      result = await db.collection(collectionName).find(jsonQuery).toArray(); // Execute find and convert to array
+
+      return res.json({ output: result, status: 'Pass' });
+    }
+
+    return res.status(400).json({ output: 'Invalid command', status: 'Fail' });
   } catch (error) {
     console.error(error); // Log the error for debugging
     res.status(500).json({ output: error.message, status: 'Fail' });
