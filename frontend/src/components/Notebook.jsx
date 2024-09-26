@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { Plus, Share2 } from 'lucide-react';
+import { Share2 } from 'lucide-react';
 import QueryCell from './QueryCell';
 
 const Notebook = ({ notebooks, onUpdateNotebook }) => {
@@ -9,17 +9,10 @@ const Notebook = ({ notebooks, onUpdateNotebook }) => {
 
   useEffect(() => {
     const currentNotebook = notebooks.find(n => n._id === id);
-    if (currentNotebook && (!currentNotebook.cells || currentNotebook.cells.length === 0)) {
-      currentNotebook.cells = [{
-        _id: Date.now().toString(),
-        content: '',
-        result: null,
-      }];
-    }
     setNotebook(currentNotebook);
   }, [id, notebooks]);
 
-  const handleAddCell = async () => {
+  const handleAddCell = async (index) => {
     if (notebook) {
       const newCell = {
         content: '',
@@ -35,7 +28,11 @@ const Notebook = ({ notebooks, onUpdateNotebook }) => {
         });
         if (!response.ok) throw new Error('Failed to add cell');
         const data = await response.json();
-        const updatedCells = [...notebook.cells, data.cell];
+        const updatedCells = [
+          ...notebook.cells.slice(0, index + 1),
+          data.cell,
+          ...notebook.cells.slice(index + 1)
+        ];
         const updatedNotebook = { ...notebook, cells: updatedCells };
         setNotebook(updatedNotebook);
         onUpdateNotebook(updatedNotebook);
@@ -56,13 +53,6 @@ const Notebook = ({ notebooks, onUpdateNotebook }) => {
         });
         if (!response.ok) throw new Error('Failed to delete cell');
         const updatedCells = notebook.cells.filter((cell) => cell._id !== cellId);
-        if (updatedCells.length === 0) {
-          updatedCells.push({
-            _id: Date.now().toString(),
-            content: '',
-            result: null,
-          });
-        }
         const updatedNotebook = { ...notebook, cells: updatedCells };
         setNotebook(updatedNotebook);
         onUpdateNotebook(updatedNotebook);
@@ -124,6 +114,19 @@ const Notebook = ({ notebooks, onUpdateNotebook }) => {
     }
   };
 
+  const handleMoveCell = (index, direction) => {
+    if (notebook) {
+      const newIndex = index + direction;
+      if (newIndex >= 0 && newIndex < notebook.cells.length) {
+        const updatedCells = [...notebook.cells];
+        [updatedCells[index], updatedCells[newIndex]] = [updatedCells[newIndex], updatedCells[index]];
+        const updatedNotebook = { ...notebook, cells: updatedCells };
+        setNotebook(updatedNotebook);
+        onUpdateNotebook(updatedNotebook);
+      }
+    }
+  };
+
   if (!notebook) {
     return <div>Notebook not found</div>;
   }
@@ -131,25 +134,33 @@ const Notebook = ({ notebooks, onUpdateNotebook }) => {
   return (
     <div className="notebook-container">
       <div className="notebook-header">
-        <h2>{notebook.title}</h2>
+        <h2 style={{ textAlign: 'center' }}>{notebook.title}</h2>
         <button className="share-button">
           <Share2 size={16} />
           Share
         </button>
       </div>
-      {notebook.cells.map((cell, index) => (
-        <QueryCell
-          key={cell._id}
-          cell={cell}
-          onDelete={handleDeleteCell}
-          onUpdate={handleUpdateCell}
-          onExecute={handleExecuteCell}
-        />
-      ))}
-      <button className="btn-add-cell" onClick={handleAddCell}>
-        <Plus size={16} />
-        Add Cell
-      </button>
+      {notebook.cells.length === 0 ? (
+        <button className="btn-add-cell" onClick={() => handleAddCell(-1)}>
+          Add Cell
+        </button>
+      ) : (
+        notebook.cells.map((cell, index) => (
+          <QueryCell
+            key={cell._id}
+            cell={cell}
+            cellNumber={index + 1}
+            onDelete={handleDeleteCell}
+            onUpdate={handleUpdateCell}
+            onExecute={handleExecuteCell}
+            onMoveUp={() => handleMoveCell(index, -1)}
+            onMoveDown={() => handleMoveCell(index, 1)}
+            onInsertCell={() => handleAddCell(index)}
+            isFirst={index === 0}
+            isLast={index === notebook.cells.length - 1}
+          />
+        ))
+      )}
     </div>
   );
 };

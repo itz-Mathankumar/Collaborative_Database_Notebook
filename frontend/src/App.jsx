@@ -41,6 +41,7 @@ const App = () => {
       const data = await response.json();
       setNotebooks(data.notebooks);
       console.log('Fetched notebooks:', data.notebooks); // Log fetched notebooks
+      console.log(user)
       localStorage.setItem(`notebooks_${user.username}`, JSON.stringify(data.notebooks)); // Store fetched notebooks in local storage
     } catch (error) {
       console.error('Error fetching notebooks:', error); // Log error if fetching fails

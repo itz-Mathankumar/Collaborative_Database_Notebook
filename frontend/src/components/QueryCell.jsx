@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { AlertCircle, CheckCircle, Trash2, Edit3, Play, Save } from 'lucide-react';
+import { AlertCircle, CheckCircle, Trash2, Edit3, Play, Save, ArrowUp, ArrowDown, Plus } from 'lucide-react';
 
-const QueryCell = ({ cell, onDelete, onUpdate, onExecute }) => {
+const QueryCell = ({ cell, cellNumber, onDelete, onUpdate, onExecute, onMoveUp, onMoveDown, onInsertCell, isFirst, isLast }) => {
   const [editing, setEditing] = useState(false);
   const [content, setContent] = useState(cell.content);
 
@@ -13,9 +13,11 @@ const QueryCell = ({ cell, onDelete, onUpdate, onExecute }) => {
   return (
     <div className="cell">
       <div className="cell-header">
-        <span className="cell-number">Cell {cell._id}</span>
+        <span className="cell-number">Cell {cellNumber}</span>
         <div className="cell-controls">
           <button onClick={() => onDelete(cell._id)}><Trash2 size={16} /></button>
+          {!isFirst && <button onClick={onMoveUp}><ArrowUp size={16} /></button>}
+          {!isLast && <button onClick={onMoveDown}><ArrowDown size={16} /></button>}
         </div>
       </div>
       {editing ? (
@@ -43,6 +45,10 @@ const QueryCell = ({ cell, onDelete, onUpdate, onExecute }) => {
             <button className="btn btn-secondary" onClick={() => setEditing(true)}>
               <Edit3 size={16} />
               Edit
+            </button>
+            <button className="btn btn-secondary" onClick={onInsertCell}>
+              <Plus size={16} />
+              Insert Cell
             </button>
           </div>
         </div>
