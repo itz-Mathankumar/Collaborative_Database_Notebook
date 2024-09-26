@@ -6,6 +6,9 @@ import QueryCell from './QueryCell';
 const Notebook = ({ notebooks, onUpdateNotebook }) => {
   const { id } = useParams();
   const [notebook, setNotebook] = useState(null);
+  const [isSharing, setIsSharing] = useState(false);
+  const [shareUsername, setShareUsername] = useState('');
+  const [message, setMessage] = useState('');
 
   useEffect(() => {
     const currentNotebook = notebooks.find(n => n._id === id);
@@ -127,6 +130,28 @@ const Notebook = ({ notebooks, onUpdateNotebook }) => {
     }
   };
 
+  const handleShare = async () => {
+    if (notebook && shareUsername.trim()) {
+      try {
+        const response = await fetch(`http://localhost:5000/notebooks/${notebook._id}/share`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          },
+          body: JSON.stringify({ username: shareUsername }),
+        });
+        if (!response.ok) throw new Error('Failed to share notebook');
+        const data = await response.json();
+        setMessage(`Notebook shared with ${shareUsername}!`);
+        setShareUsername('');
+        setIsSharing(false);
+      } catch (error) {
+        setMessage(`Failed to share notebook: ${error.message}`);
+      }
+    }
+  };
+
   if (!notebook) {
     return <div>Notebook not found</div>;
   }
@@ -135,11 +160,27 @@ const Notebook = ({ notebooks, onUpdateNotebook }) => {
     <div className="notebook-container">
       <div className="notebook-header">
         <h2 style={{ textAlign: 'center' }}>{notebook.title}</h2>
-        <button className="share-button">
+        <button className="share-button" onClick={() => setIsSharing(true)}>
           <Share2 size={16} />
           Share
         </button>
       </div>
+      {isSharing && (
+        <div className="share-modal">
+          <div className="share-content">
+            <h3>Share Notebook</h3>
+            <input
+              type="text"
+              placeholder="Enter username"
+              value={shareUsername}
+              onChange={(e) => setShareUsername(e.target.value)}
+            />
+            <button onClick={handleShare}>Share</button>
+            <button onClick={() => setIsSharing(false)}>Cancel</button>
+            {message && <p>{message}</p>}
+          </div>
+        </div>
+      )}
       {notebook.cells.length === 0 ? (
         <button className="btn-add-cell" onClick={() => handleAddCell(-1)}>
           Add Cell

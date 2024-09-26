@@ -269,7 +269,7 @@ app.delete('/notebooks/:notebookId/cells/:cellId', authenticateJWT, async (req, 
 
 // Share a notebook with another user by username
 app.post('/notebooks/:notebookId/share', authenticateJWT, async (req, res) => {
-  const { username } = req.body; // Assume you get userId and username from the request
+  const { username } = req.body; 
   const { notebookId } = req.params;
   const userId = req.user.userId;
 
@@ -324,7 +324,6 @@ app.get('/notebooks/:userId', authenticateJWT, async (req, res) => {
   }
 });
 
-
 // Delete a notebook
 app.delete('/notebooks/:notebookId', authenticateJWT, async (req, res) => {
   const { notebookId } = req.params;
@@ -352,7 +351,6 @@ app.delete('/notebooks/:notebookId', authenticateJWT, async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 });
-
 
 app.post('/execute-query', authenticateJWT, async (req, res) => {
   const { command } = req.body;
