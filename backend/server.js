@@ -67,15 +67,15 @@ const cellSchema = new mongoose.Schema({
   // Add other properties related to the cell, e.g., type (text, image, etc.)
 });
 
-// Notebook schema
 const notebookSchema = new mongoose.Schema({
   title: { type: String, required: true },
-  cells: [cellSchema], // Array of cells
-  userId: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'User' }, // Owner of the notebook
-  sharedWith: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }] // Array of user IDs with whom the notebook is shared
+  cells: [{ type: Object }],
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  sharedWith: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }] // Ensure this is present
 });
 
 const Notebook = mongoose.model('Notebook', notebookSchema);
+
 
 // Register new user
 app.post('/register', async (req, res) => {
@@ -118,21 +118,34 @@ app.post('/login', async (req, res) => {
 app.post('/create-notebook', async (req, res) => {
   const { userId, title } = req.body;
 
+  console.log(`Received request to create a new notebook with title: "${title}" for user ID: ${userId}`);
+
   try {
     const user = await User.findById(userId);
-    if (!user) return res.status(404).json({ message: 'User not found' });
+    if (!user) {
+      console.log(`User not found for ID: ${userId}`);
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    console.log(`Creating new notebook for user: ${user.username}`); // Assuming user has a username field
 
     const newNotebook = new Notebook({ title, cells: [], userId: user._id });
     await newNotebook.save();
 
+    console.log(`New notebook created with ID: ${newNotebook._id} and title: "${title}"`);
+
     user.notebooks.push({ id: newNotebook._id, title });
     await user.save();
 
+    console.log(`Notebook with ID: ${newNotebook._id} added to user: ${user.username}`);
+
     res.status(201).json({ message: 'Notebook created', notebookId: newNotebook._id });
   } catch (error) {
+    console.error('Error creating notebook:', error.message); // Log the error message
     res.status(500).json({ message: error.message });
   }
 });
+
 
 // Add a new cell to a notebook
 app.post('/notebooks/:notebookId/cells', async (req, res) => {
@@ -243,7 +256,11 @@ app.get('/notebooks/:userId', async (req, res) => {
   const { userId } = req.params;
 
   try {
-    const user = await User.findById(userId).populate('notebooks.sharedWith'); // Populate sharedWith for detailed information
+    const user = await User.findById(userId).populate({
+      path: 'notebooks.sharedWith',
+      options: { strictPopulate: false } // This line allows overriding the strict population check
+    });
+    
     if (!user) return res.status(404).json({ message: 'User not found' });
 
     // Find all notebooks owned by the user or shared with the user
@@ -259,6 +276,7 @@ app.get('/notebooks/:userId', async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 });
+
 
 // Get all notebooks shared with a specific user
 app.get('/notebooks/shared/:userId', async (req, res) => {
