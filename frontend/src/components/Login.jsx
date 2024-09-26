@@ -1,14 +1,23 @@
 import React, { useState } from 'react';
+import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 
 const Login = ({ onLogin }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Replace with your login logic
-    const userData = { username }; // Simulating user data
-    onLogin(userData);
+    try {
+      const response = await axios.post('http://localhost:5000/login', { username, password });
+      const { token, userId } = response.data;
+      localStorage.setItem('token', token);
+      onLogin({ userId, username }); // Pass user data to parent
+      navigate('/'); // Redirect to notebook list
+    } catch (error) {
+      console.error('Login failed:', error.response.data.message);
+    }
   };
 
   return (

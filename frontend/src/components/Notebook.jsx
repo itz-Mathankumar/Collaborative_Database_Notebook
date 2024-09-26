@@ -1,8 +1,10 @@
+// src/components/Notebook.js
+
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { Plus, Share2 } from 'lucide-react';
 import QueryCell from './QueryCell';
-import { mongoDBExecution } from '../utils/mongoDBExecution'; // Import the execution function
+import { mongoDBExecution } from '../utils/mongoDBExecution';
 
 const Notebook = ({ notebooks, onUpdateNotebook }) => {
   const { id } = useParams();
@@ -10,6 +12,13 @@ const Notebook = ({ notebooks, onUpdateNotebook }) => {
 
   useEffect(() => {
     const currentNotebook = notebooks.find(n => n.id === parseInt(id));
+    if (!currentNotebook.cells.length) {
+      currentNotebook.cells.push({
+        id: Date.now(),
+        query: '',
+        result: null,
+      });
+    }
     setNotebook(currentNotebook);
   }, [id, notebooks]);
 
@@ -27,9 +36,34 @@ const Notebook = ({ notebooks, onUpdateNotebook }) => {
     }
   };
 
+  const handleInsertCell = (index) => {
+    if (notebook) {
+      const newCell = {
+        id: Date.now(),
+        query: '',
+        result: null,
+      };
+      const updatedCells = [...notebook.cells];
+      updatedCells.splice(index, 0, newCell); // Insert the new cell at the specified index
+      const updatedNotebook = { ...notebook, cells: updatedCells };
+      setNotebook(updatedNotebook);
+      onUpdateNotebook(updatedNotebook);
+    }
+  };
+
   const handleDeleteCell = (cellId) => {
     if (notebook) {
       const updatedCells = notebook.cells.filter((cell) => cell.id !== cellId);
+
+      // Ensure at least one cell remains
+      if (updatedCells.length === 0) {
+        updatedCells.push({
+          id: Date.now(),
+          query: '',
+          result: null,
+        });
+      }
+
       const updatedNotebook = { ...notebook, cells: updatedCells };
       setNotebook(updatedNotebook);
       onUpdateNotebook(updatedNotebook);
@@ -49,10 +83,7 @@ const Notebook = ({ notebooks, onUpdateNotebook }) => {
 
   const handleExecuteCell = async (cellId, query) => {
     try {
-      // Call the MongoDB execution function and get the response
       const result = await mongoDBExecution(query);
-      
-      // Update the notebook with the result from the MongoDB execution
       const updatedCells = notebook.cells.map((cell) =>
         cell.id === cellId ? { ...cell, result: { status: 'Pass', output: result } } : cell
       );
@@ -60,7 +91,6 @@ const Notebook = ({ notebooks, onUpdateNotebook }) => {
       setNotebook(updatedNotebook);
       onUpdateNotebook(updatedNotebook);
     } catch (error) {
-      // In case of an error, update the cell with the error message
       const updatedCells = notebook.cells.map((cell) =>
         cell.id === cellId ? { ...cell, result: { status: 'Fail', output: error.message } } : cell
       );
@@ -104,21 +134,22 @@ const Notebook = ({ notebooks, onUpdateNotebook }) => {
         </button>
       </div>
       {notebook.cells.map((cell, index) => (
-        <QueryCell
-          key={cell.id}
-          cell={cell}
-          index={index}
-          onDelete={handleDeleteCell}
-          onUpdate={handleUpdateCell}
-          onExecute={handleExecuteCell}
-          onMoveUp={() => handleMoveCellUp(index)}
-          onMoveDown={() => handleMoveCellDown(index)}
-        />
+        <div key={cell.id}>
+          <QueryCell
+            cell={cell}
+            index={index}
+            onDelete={handleDeleteCell}
+            onUpdate={handleUpdateCell}
+            onExecute={handleExecuteCell}
+            onMoveUp={() => handleMoveCellUp(index)}
+            onMoveDown={() => handleMoveCellDown(index)}
+          />
+          <button className="btn-insert-cell" onClick={() => handleInsertCell(index)}>
+            <Plus size={16} />
+            Add Cell
+          </button>
+        </div>
       ))}
-      <button className="btn-add-cell" onClick={handleAddCell}>
-        <Plus size={16} />
-        Add Cell
-      </button>
     </div>
   );
 };

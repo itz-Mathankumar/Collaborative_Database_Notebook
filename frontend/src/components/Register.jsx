@@ -1,13 +1,27 @@
 import React, { useState } from 'react';
+import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 
-const Register = () => {
+const Register = ({ handleLogin }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Replace with your registration logic
-    console.log('Registering user:', { username, password });
+    try {
+      // Send a POST request to the backend for user registration
+      await axios.post('http://localhost:5000/register', { username, password });
+
+      // Automatically log in the user after registration
+      const response = await axios.post('http://localhost:5000/login', { username, password });
+      const { token, userId } = response.data;
+      localStorage.setItem('token', token);
+      handleLogin({ userId, username }); // Pass user data to parent
+      navigate('/'); // Redirect to notebook list
+    } catch (error) {
+      console.error('Registration failed:', error.response.data.message);
+    }
   };
 
   return (

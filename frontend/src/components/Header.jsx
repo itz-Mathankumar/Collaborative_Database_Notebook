@@ -6,8 +6,17 @@ const Header = ({ user, handleLogout }) => (
       <div className="header-content">
         <nav className="header-nav">
           <ul>
-            <li>
-            </li>
+            {user ? (
+              <>
+                <li>Hello, {user.username}</li>
+                <li>
+                  <button onClick={handleLogout}>Logout</button>
+                </li>
+              </>
+            ) : (
+              <>
+              </>
+            )}
           </ul>
         </nav>
         <h1 className="header-title">Collaborative Database Notebook</h1>

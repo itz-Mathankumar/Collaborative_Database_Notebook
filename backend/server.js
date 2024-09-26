@@ -5,7 +5,6 @@ const cors = require('cors');
 const dotenv = require('dotenv').config();
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const { ObjectId } = require('mongodb');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -16,6 +15,7 @@ app.use(bodyParser.json());
 
 let db;
 
+// Connect to MongoDB
 const connectToMongoDB = async () => {
   try {
     const mongoURI = process.env.MONGODB_URI;
@@ -28,7 +28,7 @@ const connectToMongoDB = async () => {
   }
 };
 
-// Function to start the server
+// Start server
 const startServer = (port) => {
   const server = app.listen(port, () => {
     console.log(`Server is running on port ${port}`);
@@ -61,19 +61,34 @@ const userSchema = new mongoose.Schema({
 
 const User = mongoose.model('User', userSchema);
 
+// Cell schema
+const cellSchema = new mongoose.Schema({
+  content: { type: String, required: true },
+  // Add other properties related to the cell, e.g., type (text, image, etc.)
+});
+
+// Notebook schema
+const notebookSchema = new mongoose.Schema({
+  title: { type: String, required: true },
+  cells: [cellSchema], // Array of cells
+  userId: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'User' }, // Owner of the notebook
+  sharedWith: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }] // Array of user IDs with whom the notebook is shared
+});
+
+const Notebook = mongoose.model('Notebook', notebookSchema);
+
 // Register new user
 app.post('/register', async (req, res) => {
   const { username, password } = req.body;
 
   try {
-    // Check if the username already exists
     const existingUser = await User.findOne({ username });
     if (existingUser) {
       return res.status(400).json({ message: 'Username already exists' });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = new User({ username, password: hashedPassword });
+    const newUser = new User({ username, password: hashedPassword, notebooks: [] });
     await newUser.save();
     res.status(201).json({ message: 'User registered successfully' });
   } catch (error) {
@@ -92,7 +107,6 @@ app.post('/login', async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(400).json({ message: 'Invalid credentials' });
 
-    // Create and return a token
     const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
     res.json({ token, userId: user._id });
   } catch (error) {
@@ -108,38 +122,160 @@ app.post('/create-notebook', async (req, res) => {
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: 'User not found' });
 
-    const notebookId = new mongoose.Types.ObjectId().toString();
-    user.notebooks.push({ id: notebookId, title });
+    const newNotebook = new Notebook({ title, cells: [], userId: user._id });
+    await newNotebook.save();
+
+    user.notebooks.push({ id: newNotebook._id, title });
     await user.save();
-    res.status(201).json({ message: 'Notebook created', notebookId });
+
+    res.status(201).json({ message: 'Notebook created', notebookId: newNotebook._id });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 });
 
-// Get user notebooks
-app.get('/notebooks/:userId', async (req, res) => {
-  const { userId } = req.params;
+// Add a new cell to a notebook
+app.post('/notebooks/:notebookId/cells', async (req, res) => {
+  const { userId, content } = req.body; // Assume you get userId from the request
+  const { notebookId } = req.params;
 
   try {
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: 'User not found' });
 
-    res.json({ notebooks: user.notebooks });
+    const notebook = await Notebook.findById(notebookId);
+    if (!notebook || !notebook.userId.equals(userId)) {
+      return res.status(404).json({ message: 'Notebook not found or access denied' });
+    }
+
+    const newCell = { content };
+    notebook.cells.push(newCell);
+    await notebook.save();
+
+    res.status(201).json({ message: 'Cell added', cell: newCell });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 });
 
-// Helper function to safely parse JSON with potential ObjectId
-const safeJSONParse = (str) => {
-  return JSON.parse(str, (key, value) => {
-    if (typeof value === 'string' && value.match(/^[0-9a-fA-F]{24}$/)) {
-      return new ObjectId(value);
+// Update a cell in a notebook
+app.put('/notebooks/:notebookId/cells/:cellId', async (req, res) => {
+  const { userId, content } = req.body; // Assume you get userId from the request
+  const { notebookId, cellId } = req.params;
+
+  try {
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    const notebook = await Notebook.findById(notebookId);
+    if (!notebook || !notebook.userId.equals(userId)) {
+      return res.status(404).json({ message: 'Notebook not found or access denied' });
     }
-    return value;
-  });
-};
+
+    const cell = notebook.cells.id(cellId);
+    if (!cell) return res.status(404).json({ message: 'Cell not found' });
+
+    cell.content = content; // Update cell content
+    await notebook.save();
+
+    res.status(200).json({ message: 'Cell updated', cell });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Delete a notebook
+app.delete('/notebooks/:notebookId', async (req, res) => {
+  const { userId } = req.body; // Assume you get userId from the request
+  const { notebookId } = req.params;
+
+  try {
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    const notebook = await Notebook.findById(notebookId);
+    if (!notebook || !notebook.userId.equals(userId)) {
+      return res.status(404).json({ message: 'Notebook not found or access denied' });
+    }
+
+    await Notebook.deleteOne({ _id: notebookId });
+    user.notebooks = user.notebooks.filter(notebook => !notebook.id.equals(notebookId));
+    await user.save();
+
+    res.status(200).json({ message: 'Notebook deleted' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Share a notebook with another user by username
+app.post('/notebooks/:notebookId/share', async (req, res) => {
+  const { userId, username } = req.body; // Assume you get userId and username from the request
+  const { notebookId } = req.params;
+
+  try {
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    const notebook = await Notebook.findById(notebookId);
+    if (!notebook || !notebook.userId.equals(userId)) {
+      return res.status(404).json({ message: 'Notebook not found or access denied' });
+    }
+
+    const userToShare = await User.findOne({ username });
+    if (!userToShare) return res.status(404).json({ message: 'User to share not found' });
+
+    if (notebook.sharedWith.includes(userToShare._id)) {
+      return res.status(400).json({ message: 'Notebook is already shared with this user' });
+    }
+
+    notebook.sharedWith.push(userToShare._id); // Add user to sharedWith array
+    await notebook.save();
+
+    res.status(200).json({ message: 'Notebook shared successfully' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Get notebooks for a specific user (owned and shared)
+app.get('/notebooks/:userId', async (req, res) => {
+  const { userId } = req.params;
+
+  try {
+    const user = await User.findById(userId).populate('notebooks.sharedWith'); // Populate sharedWith for detailed information
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    // Find all notebooks owned by the user or shared with the user
+    const notebooks = await Notebook.find({
+      $or: [
+        { userId: user._id },
+        { sharedWith: user._id }
+      ]
+    }).populate('sharedWith');
+
+    res.json({ notebooks });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Get all notebooks shared with a specific user
+app.get('/notebooks/shared/:userId', async (req, res) => {
+  const { userId } = req.params;
+
+  try {
+    const user = await User.findById(userId).populate('notebooks.sharedWith');
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    // Filter notebooks that are shared with this user
+    const sharedNotebooks = await Notebook.find({ sharedWith: user._id }).populate('userId');
+
+    res.json({ notebooks: sharedNotebooks });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
 
 app.post('/execute-query', async (req, res) => {
   const { command } = req.body;
