@@ -8,7 +8,6 @@ const Notebook = ({ notebooks, onUpdateNotebook }) => {
   const [notebook, setNotebook] = useState(null);
   const [isSharing, setIsSharing] = useState(false);
   const [shareUsername, setShareUsername] = useState('');
-  const [message, setMessage] = useState('');
 
   useEffect(() => {
     const currentNotebook = notebooks.find(n => n._id === id);
@@ -17,9 +16,7 @@ const Notebook = ({ notebooks, onUpdateNotebook }) => {
 
   const handleAddCell = async (index) => {
     if (notebook) {
-      const newCell = {
-        content: '',
-      };
+      const newCell = { content: '' };
       try {
         const response = await fetch(`http://localhost:5000/notebooks/${notebook._id}/cells`, {
           method: 'POST',
@@ -41,6 +38,7 @@ const Notebook = ({ notebooks, onUpdateNotebook }) => {
         onUpdateNotebook(updatedNotebook);
       } catch (error) {
         console.error('Error adding cell:', error);
+        alert('Failed to add cell');
       }
     }
   };
@@ -61,6 +59,7 @@ const Notebook = ({ notebooks, onUpdateNotebook }) => {
         onUpdateNotebook(updatedNotebook);
       } catch (error) {
         console.error('Error deleting cell:', error);
+        alert('Failed to delete cell');
       }
     }
   };
@@ -85,6 +84,7 @@ const Notebook = ({ notebooks, onUpdateNotebook }) => {
         onUpdateNotebook(updatedNotebook);
       } catch (error) {
         console.error('Error updating cell:', error);
+        alert('Failed to update cell');
       }
     }
   };
@@ -114,6 +114,7 @@ const Notebook = ({ notebooks, onUpdateNotebook }) => {
       const updatedNotebook = { ...notebook, cells: updatedCells };
       setNotebook(updatedNotebook);
       onUpdateNotebook(updatedNotebook);
+      alert('Failed to execute query');
     }
   };
 
@@ -142,12 +143,12 @@ const Notebook = ({ notebooks, onUpdateNotebook }) => {
           body: JSON.stringify({ username: shareUsername }),
         });
         if (!response.ok) throw new Error('Failed to share notebook');
-        const data = await response.json();
-        setMessage(`Notebook shared with ${shareUsername}!`);
+        alert('Notebook shared successfully');
         setShareUsername('');
         setIsSharing(false);
       } catch (error) {
-        setMessage(`Failed to share notebook: ${error.message}`);
+        console.error('Failed to share notebook:', error);
+        alert('Failed to share notebook');
       }
     }
   };
@@ -158,8 +159,8 @@ const Notebook = ({ notebooks, onUpdateNotebook }) => {
 
   return (
     <div className="notebook-container">
-      <div className="notebook-header">
-        <h2 style={{ textAlign: 'center' }}>{notebook.title}</h2>
+      <div className="notebook-header" style={{ textAlign: 'center' }}>
+        <h2>{notebook.title}</h2>
         <button className="share-button" onClick={() => setIsSharing(true)}>
           <Share2 size={16} />
           Share
@@ -177,7 +178,6 @@ const Notebook = ({ notebooks, onUpdateNotebook }) => {
             />
             <button onClick={handleShare}>Share</button>
             <button onClick={() => setIsSharing(false)}>Cancel</button>
-            {message && <p>{message}</p>}
           </div>
         </div>
       )}

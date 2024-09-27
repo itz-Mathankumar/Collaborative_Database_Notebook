@@ -10,17 +10,15 @@ const Register = ({ handleLogin }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      // Send a POST request to the backend for user registration
       await axios.post('http://localhost:5000/register', { username, password });
-
-      // Automatically log in the user after registration
       const response = await axios.post('http://localhost:5000/login', { username, password });
       const { token, userId } = response.data;
       localStorage.setItem('token', token);
-      handleLogin({ userId, username }); // Pass user data to parent
-      navigate('/'); // Redirect to notebook list
+      handleLogin({ userId, username });
+      alert('Registration successful! You are now logged in.');
+      navigate('/');
     } catch (error) {
-      console.error('Registration failed:', error.response.data.message);
+      alert(error.response?.data?.message || 'Registration failed');
     }
   };
 

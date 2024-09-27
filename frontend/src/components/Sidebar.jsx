@@ -5,6 +5,7 @@ import { X, Plus } from 'lucide-react';
 const Sidebar = ({ user, handleLogout, notebooks, onDeleteNotebook, onCreateNotebook }) => {
   const [newNotebookName, setNewNotebookName] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(null);
+  const [showHome, setShowHome] = useState(false);
 
   const handleCreateNotebook = (e) => {
     e.preventDefault();
@@ -31,10 +32,10 @@ const Sidebar = ({ user, handleLogout, notebooks, onDeleteNotebook, onCreateNote
       <ul>
         {user ? (
           <>
-            <li><Link to="/notebooks">Home</Link></li>
+            <li><Link to="/notebooks" onClick={() => setShowHome(true)}>Home</Link></li>
             {notebooks.map(notebook => (
               <li key={notebook._id} className="notebook-item">
-                <Link to={`/notebook/${notebook._id}`}>{notebook.title}</Link>
+                <Link to={`/notebook/${notebook._id}`} onClick={() => setShowHome(false)}>{notebook.title}</Link>
                 {confirmDelete === notebook._id ? (
                   <div className="delete-confirm">
                     <button onClick={handleConfirmDelete} className="confirm-yes">Yes</button>
@@ -71,6 +72,33 @@ const Sidebar = ({ user, handleLogout, notebooks, onDeleteNotebook, onCreateNote
           </>
         )}
       </ul>
+      {showHome && (
+        <div className="notebooks-table">
+          <h3>Your Notebooks</h3>
+          {notebooks.length > 0 ? (
+            <table>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Created</th>
+                  <th>Last Updated</th>
+                </tr>
+              </thead>
+              <tbody>
+                {notebooks.map(notebook => (
+                  <tr key={notebook._id}>
+                    <td>{notebook.title}</td>
+                    <td>{new Date(notebook.createdAt).toLocaleString()}</td>
+                    <td>{new Date(notebook.updatedAt).toLocaleString()}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <p>No notebooks found.</p>
+          )}
+        </div>
+      )}
     </nav>
   );
 };

@@ -13,10 +13,11 @@ const Login = ({ onLogin }) => {
       const response = await axios.post('http://localhost:5000/login', { username, password });
       const { token, userId } = response.data;
       localStorage.setItem('token', token);
-      onLogin({ userId, username }); // Pass user data to parent
-      navigate('/'); // Redirect to notebook list
+      onLogin({ userId, username });
+      alert('Login successful!');
+      navigate('/');
     } catch (error) {
-      console.error('Login failed:', error.response.data.message);
+      alert(error.response?.data?.message || 'Login failed');
     }
   };
 

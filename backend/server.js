@@ -252,8 +252,6 @@ app.delete('/notebooks/:notebookId/cells/:cellId', authenticateJWT, async (req, 
       return res.status(404).json({ message: 'Notebook not found or access denied' });
     }
 
-    console.log(notebook.cells, cellId)
-
     const cellIndex = notebook.cells.findIndex(cell => cell._id.toString() === cellId);
     if (cellIndex === -1) return res.status(404).json({ message: 'Cell not found' });
 
@@ -289,7 +287,7 @@ app.post('/notebooks/:notebookId/share', authenticateJWT, async (req, res) => {
       return res.status(400).json({ message: 'Notebook is already shared with this user' });
     }
 
-    notebook.sharedWith.push(userToShare._id); // Add user to sharedWith array
+    notebook.sharedWith.push(userToShare._id);
     await notebook.save();
 
     res.status(200).json({ message: 'Notebook shared successfully' });
@@ -305,12 +303,11 @@ app.get('/notebooks/:userId', authenticateJWT, async (req, res) => {
   try {
     const user = await User.findById(userId).populate({
       path: 'notebooks.sharedWith',
-      options: { strictPopulate: false } // This line allows overriding the strict population check
+      options: { strictPopulate: false }
     });
     
     if (!user) return res.status(404).json({ message: 'User not found' });
 
-    // Find all notebooks owned by the user or shared with the user
     const notebooks = await Notebook.find({
       $or: [
         { userId: user._id },
@@ -329,21 +326,18 @@ app.delete('/notebooks/:notebookId', authenticateJWT, async (req, res) => {
   const { notebookId } = req.params;
 
   try {
-    const userId = req.user.userId; // Get the userId from the decoded JWT (attached by the middleware)
+    const userId = req.user.userId;
 
-    // Fetch the user by userId
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: 'User not found' });
 
-    // Fetch the notebook by notebookId
     const notebook = await Notebook.findById(notebookId);
     if (!notebook || !notebook.userId.equals(userId)) {
       return res.status(404).json({ message: 'Notebook not found or access denied' });
     }
 
-    // Delete the notebook and update the user's notebooks array
     await Notebook.deleteOne({ _id: notebookId });
-    user.notebooks = user.notebooks.filter(notebook => !notebook.id.equals(notebookId));
+    user.notebooks = user.notebooks.filter(notebook => !notebook._id.equals(notebookId));
     await user.save();
 
     res.status(200).json({ message: 'Notebook deleted' });
@@ -356,7 +350,7 @@ app.post('/execute-query', authenticateJWT, async (req, res) => {
   const { command } = req.body;
 
   if (!command) {
-      return res.status(400).json({ output: 'Command is required', status: 'Fail' });
+      return res.status(400).json({ output: 'Failed to execute as query is not provided or empty.', status: 'Fail' });
   }
 
   if (!db) {
@@ -376,7 +370,6 @@ app.post('/execute-query', authenticateJWT, async (req, res) => {
       const args1 = operation.split("(");
       operation = args1[0];
       
-      // Check if the operation is valid
       const validOperations = [
           'find', 'findone', 'insertone', 'insertmany',
           'updateone', 'updatemany', 'deleteone', 'deletemany',
@@ -390,13 +383,10 @@ app.post('/execute-query', authenticateJWT, async (req, res) => {
 
       console.log("Operation Name:", operation);
       
-      // Extract the argument string if it exists
       if (argsStringMatch && argsStringMatch[1]) {
-          // Get the argument string without parentheses
           const argsString = argsStringMatch[1].trim();
   
           try {
-              // Use different parsing based on the operation
               switch (operation.toLowerCase()) {
                   case 'find':
                   case 'findone':
@@ -404,7 +394,6 @@ app.post('/execute-query', authenticateJWT, async (req, res) => {
                   case 'deletemany':
                   case 'updateone':
                   case 'updatemany':
-                      // Expecting query object as first argument
                       const queryJson = argsString.replace(/([{,]\s*)([a-zA-Z0-9_]+)(?=\s*:)/g, '$1"$2"')
                                                    .replace(/'/g, '"')
                                                    .replace(/(\$[a-zA-Z]+)/g, '"$1"');
@@ -415,14 +404,12 @@ app.post('/execute-query', authenticateJWT, async (req, res) => {
                   case 'insertmany':
                   case 'createindex':
                   case 'dropindex':
-                      // Expecting a document or documents array
                       const docsJson = argsString.replace(/([{,]\s*)([a-zA-Z0-9_]+)(?=\s*:)/g, '$1"$2"')
                                                    .replace(/'/g, '"');
                       args = [JSON.parse(docsJson)];
                       break;
 
                   case 'aggregate':
-                      // For aggregation, we may expect an array of stages
                       const stagesJson = argsString.replace(/([{,]\s*)([a-zA-Z0-9_]+)(?=\s*:)/g, '$1"$2"')
                                                     .replace(/'/g, '"');
                       args = [JSON.parse(stagesJson)];
@@ -430,7 +417,6 @@ app.post('/execute-query', authenticateJWT, async (req, res) => {
 
                   case 'count':
                   case 'distinct':
-                      // Might require a query object
                       const countDistinctJson = argsString.replace(/([{,]\s*)([a-zA-Z0-9_]+)(?=\s*:)/g, '$1"$2"')
                                                            .replace(/'/g, '"')
                                                            .replace(/(\$[a-zA-Z]+)/g, '"$1"');
@@ -438,7 +424,6 @@ app.post('/execute-query', authenticateJWT, async (req, res) => {
                       break;
 
                   case 'drop':
-                      // No arguments needed for drop
                       args = [];
                       break;
 
@@ -457,7 +442,6 @@ app.post('/execute-query', authenticateJWT, async (req, res) => {
       const collection = db.collection(collectionName);
       let result;
 
-      // Execute the corresponding operation
       switch (operation.toLowerCase()) {
           case 'find':
               result = await collection.find(...args).toArray();
@@ -508,6 +492,6 @@ app.post('/execute-query', authenticateJWT, async (req, res) => {
       res.json({ output: result, status: 'Pass' });
   } catch (error) {
       console.error(error);
-      res.status(500).json({ output: error.message, status: 'Fail' });
+      res.status(500).json({ output: "Syntax validation or parsing failed, check the query and try again.", status: 'Fail' });
   }
 });

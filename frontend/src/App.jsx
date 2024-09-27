@@ -11,26 +11,24 @@ const App = () => {
   const [user, setUser] = useState(null);
   const [notebooks, setNotebooks] = useState([]);
 
-  // Check for user in localStorage on app load
   useEffect(() => {
     const storedUser = localStorage.getItem('userToken');
     if (storedUser) {
-      setUser(JSON.parse(storedUser)); // Set user from localStorage if available
-      console.log('User loaded from localStorage:', JSON.parse(storedUser)); // Log the loaded user
+      setUser(JSON.parse(storedUser));
+      console.log('User loaded from localStorage:', JSON.parse(storedUser));
     } else {
       console.log('No user found in localStorage.');
     }
   }, []);
 
-  // Fetch notebooks for logged-in user
   const fetchNotebooks = async (userId) => {
-    console.log('Fetching notebooks for user ID:', userId); // Log the user ID for fetching notebooks
+    console.log('Fetching notebooks for user ID:', userId);
     try {
       const response = await fetch(`http://localhost:5000/notebooks/${userId}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`, // Assuming you store a token for user authentication
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
         },
       });
 
@@ -40,50 +38,49 @@ const App = () => {
 
       const data = await response.json();
       setNotebooks(data.notebooks);
-      console.log('Fetched notebooks:', data.notebooks); // Log fetched notebooks
+      console.log('Fetched notebooks:', data.notebooks);
       console.log(user)
-      localStorage.setItem(`notebooks_${user.username}`, JSON.stringify(data.notebooks)); // Store fetched notebooks in local storage
+      localStorage.setItem(`notebooks_${user.username}`, JSON.stringify(data.notebooks));
     } catch (error) {
-      console.error('Error fetching notebooks:', error); // Log error if fetching fails
+      console.error('Error fetching notebooks:', error);
     }
   };
 
-  // Load notebooks if user is logged in
   useEffect(() => {
     if (user) {
-      fetchNotebooks(user.userId); // Fetch notebooks when user logs in
+      fetchNotebooks(user.userId);
     } else {
-      setNotebooks([]); // Reset notebooks if no user
+      setNotebooks([]);
       console.log('No user logged in, notebooks reset.');
     }
   }, [user]);
 
   const handleLogin = (userData) => {
     setUser(userData);
-    localStorage.setItem('userToken', JSON.stringify(userData)); // Store user data in localStorage
-    console.log('User logged in:', userData); // Log the user data on login
-    fetchNotebooks(userData.userId); // Fetch notebooks immediately after login
+    localStorage.setItem('userToken', JSON.stringify(userData));
+    console.log('User logged in:', userData);
+    fetchNotebooks(userData.userId);
   };
 
   const handleLogout = () => {
     setUser(null);
     setNotebooks([]);
-    localStorage.removeItem('userToken'); // Remove user data from localStorage
-    console.log('User logged out.'); // Log the logout event
+    localStorage.removeItem('userToken');
+    console.log('User logged out.');
   };
 
   const handleCreateNotebook = async (notebookName) => {
     if (!user) return;
-    console.log('Creating notebook with name:', notebookName); // Log the notebook name being created
+    console.log('Creating notebook with name:', notebookName);
 
     try {
       const response = await fetch('http://localhost:5000/create-notebook', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`, // Assuming you store a token for user authentication
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
         },
-        body: JSON.stringify({ title: notebookName }), // Pass the user ID and notebook title
+        body: JSON.stringify({ title: notebookName }),
       });
 
       if (!response.ok) {
@@ -91,13 +88,13 @@ const App = () => {
       }
 
       const data = await response.json();
-      const newNotebook = { id: data.notebookId, name: notebookName, cells: [] }; // Use the ID returned from the server
+      const newNotebook = { id: data.notebookId, name: notebookName, cells: [] };
       const updatedNotebooks = [...notebooks, newNotebook];
       setNotebooks(updatedNotebooks);
       localStorage.setItem(`notebooks_${user.username}`, JSON.stringify(updatedNotebooks));
-      console.log('New notebook created:', newNotebook); // Log the created notebook
+      console.log('New notebook created:', newNotebook);
     } catch (error) {
-      console.error('Error creating notebook:', error); // Log error if creation fails
+      console.error('Error creating notebook:', error);
     }
 
     window.location.reload();
@@ -105,14 +102,14 @@ const App = () => {
 
   const handleDeleteNotebook = async (notebookId) => {
     if (!user) return;
-    console.log('Deleting notebook with ID:', notebookId); // Log the notebook ID being deleted
+    console.log('Deleting notebook with ID:', notebookId);
     console.log(localStorage.getItem('token'))
   
     try {
       const response = await fetch(`http://localhost:5000/notebooks/${notebookId}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`, // Assuming you store a token for user authentication
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
         },
       });
   
@@ -123,12 +120,11 @@ const App = () => {
       const updatedNotebooks = notebooks.filter(notebook => notebook.id !== notebookId);
       setNotebooks(updatedNotebooks);
       localStorage.setItem(`notebooks_${user.username}`, JSON.stringify(updatedNotebooks));
-      console.log('Notebook deleted. Updated notebooks:', updatedNotebooks); // Log updated notebooks after deletion
-  
-
-      
+      console.log('Notebook deleted. Updated notebooks:', updatedNotebooks);
+      alert("Notebook is deleted successfully.");
     } catch (error) {
-      console.error('Error deleting notebook:', error); // Log error if deletion fails
+      console.error('Error deleting notebook:', error);
+      alert("Failed to delete notebook. Only notebook owner can delete it.");
     }
 
     window.location.reload();
@@ -136,13 +132,13 @@ const App = () => {
   
 
   const handleUpdateNotebook = (updatedNotebook) => {
-    console.log('Updating notebook:', updatedNotebook); // Log the updated notebook
+    console.log('Updating notebook:', updatedNotebook);
     const updatedNotebooks = notebooks.map(notebook => 
       notebook.id === updatedNotebook.id ? updatedNotebook : notebook
     );
     setNotebooks(updatedNotebooks);
     localStorage.setItem(`notebooks_${user.username}`, JSON.stringify(updatedNotebooks));
-    console.log('Notebooks updated:', updatedNotebooks); // Log the updated notebooks list
+    console.log('Notebooks updated:', updatedNotebooks);
   };
 
   return (
