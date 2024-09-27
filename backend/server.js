@@ -373,7 +373,7 @@ app.post('/execute-query', authenticateJWT, async (req, res) => {
       const validOperations = [
           'find', 'findone', 'insertone', 'insertmany',
           'updateone', 'updatemany', 'deleteone', 'deletemany',
-          'count', 'distinct', 'aggregate', 'drop',
+          'count', 'distinct', 'drop',
           'createindex', 'dropindex'
       ];
 
@@ -387,50 +387,55 @@ app.post('/execute-query', authenticateJWT, async (req, res) => {
           const argsString = argsStringMatch[1].trim();
   
           try {
-              switch (operation.toLowerCase()) {
-                  case 'find':
-                  case 'findone':
-                  case 'deleteone':
-                  case 'deletemany':
-                  case 'updateone':
-                  case 'updatemany':
-                      const queryJson = argsString.replace(/([{,]\s*)([a-zA-Z0-9_]+)(?=\s*:)/g, '$1"$2"')
-                                                   .replace(/'/g, '"')
-                                                   .replace(/(\$[a-zA-Z]+)/g, '"$1"');
-                      args = [JSON.parse(queryJson)];
-                      break;
 
-                  case 'insertone':
-                  case 'insertmany':
-                  case 'createindex':
-                  case 'dropindex':
-                      const docsJson = argsString.replace(/([{,]\s*)([a-zA-Z0-9_]+)(?=\s*:)/g, '$1"$2"')
-                                                   .replace(/'/g, '"');
-                      args = [JSON.parse(docsJson)];
-                      break;
-
-                  case 'aggregate':
-                      const stagesJson = argsString.replace(/([{,]\s*)([a-zA-Z0-9_]+)(?=\s*:)/g, '$1"$2"')
-                                                    .replace(/'/g, '"');
-                      args = [JSON.parse(stagesJson)];
-                      break;
-
-                  case 'count':
-                  case 'distinct':
-                      const countDistinctJson = argsString.replace(/([{,]\s*)([a-zA-Z0-9_]+)(?=\s*:)/g, '$1"$2"')
-                                                           .replace(/'/g, '"')
-                                                           .replace(/(\$[a-zA-Z]+)/g, '"$1"');
-                      args = [JSON.parse(countDistinctJson)];
-                      break;
-
-                  case 'drop':
-                      args = [];
-                      break;
-
-                  default:
-                      throw new Error('Unsupported operation');
-              }
-
+            switch (operation.toLowerCase()) {
+              case 'find':
+              case 'findone':
+              case 'deleteone':
+              case 'deletemany':
+              case 'count':
+              case 'distinct':
+                  // For operations with a single JSON object as an argument
+                  const queryJson = argsString.replace(/([{,]\s*)([a-zA-Z0-9_]+)(?=\s*:)/g, '$1"$2"')
+                                              .replace(/'/g, '"')
+                                              .replace(/(\$[a-zA-Z]+)/g, '"$1"');
+                  args = [JSON.parse(queryJson)];
+                  break;
+          
+              case 'insertone':
+              case 'insertmany':
+              case 'createindex':
+              case 'dropindex':
+                  // For operations with a single document or array of documents
+                  const docsJson = argsString.replace(/([{,]\s*)([a-zA-Z0-9_]+)(?=\s*:)/g, '$1"$2"')
+                                             .replace(/'/g, '"');
+                  args = [JSON.parse(docsJson)];
+                  break;
+          
+              case 'updateone':
+              case 'updatemany':
+                  // For update operations with both filter and update documents
+                  const updateArgs = argsString.split(/(?<=\}),(?=\s*\{)/);  // Split the arguments on `},{`
+                  if (updateArgs.length !== 2) {
+                      throw new Error('Invalid number of arguments for update operation');
+                  }
+                  const filterJson = updateArgs[0].replace(/([{,]\s*)([a-zA-Z0-9_]+)(?=\s*:)/g, '$1"$2"')
+                                                  .replace(/'/g, '"')
+                                                  .replace(/(\$[a-zA-Z]+)/g, '"$1"');
+                  const updateJson = updateArgs[1].replace(/([{,]\s*)([a-zA-Z0-9_]+)(?=\s*:)/g, '$1"$2"')
+                                                  .replace(/'/g, '"')
+                                                  .replace(/(\$[a-zA-Z]+)/g, '"$1"');
+                  args = [JSON.parse(filterJson), JSON.parse(updateJson)];
+                  break;
+          
+              case 'drop':
+                  args = [];
+                  break;
+          
+              default:
+                  throw new Error('Unsupported operation');
+          }
+          
               console.log("Parsed Arguments:", args);
               
           } catch (err) {
@@ -472,9 +477,6 @@ app.post('/execute-query', authenticateJWT, async (req, res) => {
               break;
           case 'distinct':
               result = await collection.distinct(...args);
-              break;
-          case 'aggregate':
-              result = await collection.aggregate(...args).toArray();
               break;
           case 'drop':
               result = await collection.drop();
