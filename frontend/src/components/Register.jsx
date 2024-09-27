@@ -10,14 +10,14 @@ const Register = ({ handleLogin }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await axios.post('http://localhost:5000/register', { username, password });
-      const response = await axios.post('http://localhost:5000/login', { username, password });
+      const response = await axios.post('http://localhost:5000/register', { username, password });
+      //const response = await axios.post('http://localhost:5000/login', { username, password });
       const { token, userId } = response.data;
       localStorage.setItem('token', token);
-      handleLogin({ userId, username });
-      alert('Registration successful! You are now logged in.');
+      alert('Registration successful! You can proceed to login now.');
       navigate('/');
     } catch (error) {
+      console.log(error)
       alert(error.response?.data?.message || 'Registration failed');
     }
   };
