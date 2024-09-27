@@ -24,7 +24,7 @@ const App = () => {
   const fetchNotebooks = async (userId) => {
     console.log('Fetching notebooks for user ID:', userId);
     try {
-      const response = await fetch(`http://localhost:5000/notebooks/${userId}`, {
+      const response = await fetch(`/notebooks/${userId}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -74,7 +74,7 @@ const App = () => {
     console.log('Creating notebook with name:', notebookName);
 
     try {
-      const response = await fetch('http://localhost:5000/create-notebook', {
+      const response = await fetch('/create-notebook', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -106,7 +106,7 @@ const App = () => {
     console.log(localStorage.getItem('token'))
   
     try {
-      const response = await fetch(`http://localhost:5000/notebooks/${notebookId}`, {
+      const response = await fetch(`/notebooks/${notebookId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,

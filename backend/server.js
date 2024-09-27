@@ -15,10 +15,10 @@ app.use(cors());
 app.use(bodyParser.json());
 
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'build', 'index.html'));
+  res.sendFile(path.join(__dirname, '../frontend/build', 'index.html'));
 });
 
-app.use(express.static('build'));
+app.use(express.static('../frontend/build'));
 
 let db;
 

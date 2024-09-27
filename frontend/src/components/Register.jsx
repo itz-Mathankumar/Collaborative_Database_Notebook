@@ -10,8 +10,7 @@ const Register = ({ handleLogin }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await axios.post('http://localhost:5000/register', { username, password });
-      //const response = await axios.post('http://localhost:5000/login', { username, password });
+      const response = await axios.post('/register', { username, password });
       const { token, userId } = response.data;
       localStorage.setItem('token', token);
       alert('Registration successful! You can proceed to login now.');

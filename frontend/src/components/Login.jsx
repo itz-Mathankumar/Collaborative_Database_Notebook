@@ -10,7 +10,7 @@ const Login = ({ onLogin }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await axios.post('http://localhost:5000/login', { username, password });
+      const response = await axios.post('/login', { username, password });
       const { token, userId } = response.data;
       localStorage.setItem('token', token);
       onLogin({ userId, username });

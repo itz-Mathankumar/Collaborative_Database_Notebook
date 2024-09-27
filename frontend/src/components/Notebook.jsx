@@ -18,7 +18,7 @@ const Notebook = ({ notebooks, onUpdateNotebook }) => {
     if (notebook) {
       const newCell = { content: '' };
       try {
-        const response = await fetch(`http://localhost:5000/notebooks/${notebook._id}/cells`, {
+        const response = await fetch(`/notebooks/${notebook._id}/cells`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -46,7 +46,7 @@ const Notebook = ({ notebooks, onUpdateNotebook }) => {
   const handleDeleteCell = async (cellId) => {
     if (notebook) {
       try {
-        const response = await fetch(`http://localhost:5000/notebooks/${notebook._id}/cells/${cellId}`, {
+        const response = await fetch(`/notebooks/${notebook._id}/cells/${cellId}`, {
           method: 'DELETE',
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -67,7 +67,7 @@ const Notebook = ({ notebooks, onUpdateNotebook }) => {
   const handleUpdateCell = async (cellId, newContent) => {
     if (notebook) {
       try {
-        const response = await fetch(`http://localhost:5000/notebooks/${notebook._id}/cells/${cellId}`, {
+        const response = await fetch(`/notebooks/${notebook._id}/cells/${cellId}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -91,7 +91,7 @@ const Notebook = ({ notebooks, onUpdateNotebook }) => {
 
   const handleExecuteCell = async (cellId, query) => {
     try {
-      const response = await fetch('http://localhost:5000/execute-query', {
+      const response = await fetch('/execute-query', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -134,7 +134,7 @@ const Notebook = ({ notebooks, onUpdateNotebook }) => {
   const handleShare = async () => {
     if (notebook && shareUsername.trim()) {
       try {
-        const response = await fetch(`http://localhost:5000/notebooks/${notebook._id}/share`, {
+        const response = await fetch(`/notebooks/${notebook._id}/share`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
