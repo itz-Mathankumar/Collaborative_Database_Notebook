@@ -8,11 +8,30 @@ const Notebook = ({ notebooks, onUpdateNotebook }) => {
   const [notebook, setNotebook] = useState(null);
   const [isSharing, setIsSharing] = useState(false);
   const [shareUsername, setShareUsername] = useState('');
+  const [usernames, setUsernames] = useState([]);
 
   useEffect(() => {
     const currentNotebook = notebooks.find(n => n._id === id);
     setNotebook(currentNotebook);
   }, [id, notebooks]);
+
+  useEffect(() => {
+    const fetchUsernames = async () => {
+      try {
+        const response = await fetch('/users', {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          },
+        });
+        const data = await response.json();
+        setUsernames(data.usernames || []);
+      } catch (error) {
+        console.error('Error fetching usernames:', error);
+      }
+    };
+    
+    fetchUsernames();
+  }, []);
 
   const handleAddCell = async (index) => {
     if (notebook) {
@@ -170,12 +189,17 @@ const Notebook = ({ notebooks, onUpdateNotebook }) => {
         <div className="share-modal">
           <div className="share-content">
             <h3>Share Notebook</h3>
-            <input
-              type="text"
-              placeholder="Enter username"
+            <select
               value={shareUsername}
               onChange={(e) => setShareUsername(e.target.value)}
-            />
+            >
+              <option value="" disabled>Select a username</option>
+              {usernames.map((username) => (
+                <option key={username} value={username}>
+                  {username}
+                </option>
+              ))}
+            </select>
             <button onClick={handleShare}>Share</button>
             <button onClick={() => setIsSharing(false)}>Cancel</button>
           </div>

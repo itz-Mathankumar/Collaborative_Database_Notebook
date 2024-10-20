@@ -14,11 +14,11 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(bodyParser.json());
 
-app.get('/', (req, res) => {
+app.use(express.static(path.join(__dirname, '../frontend/build')));
+
+app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../frontend/build', 'index.html'));
 });
-
-app.use(express.static('../frontend/build'));
 
 let db;
 
@@ -136,6 +136,44 @@ app.post('/login', async (req, res) => {
     res.json({ token, userId: user._id });
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+});
+
+// List users
+app.get('/users', authenticateJWT, async (req, res) => {
+  const userId = req.user.userId;
+
+  try {
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    const users = await User.find({}, 'username');
+    const usernames = users.map(user => user.username);
+    res.json({ usernames });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// List Stats
+app.get('/stats', async (req, res) => {
+
+  try {
+    const userCount = await User.countDocuments();
+    const notebookCount = await Notebook.countDocuments();
+    
+    const sharedNotebookCount = await Notebook.countDocuments({ sharedWith: { $ne: [] } }); 
+
+    const stats = {
+      users: userCount,
+      notebooks: notebookCount,
+      sharedNotebooks: sharedNotebookCount,
+    };
+
+    res.status(200).json(stats);
+  } catch (error) {
+    console.error('Error fetching stats:', error);
+    res.status(500).json({ message: 'Internal Server Error' });
   }
 });
 

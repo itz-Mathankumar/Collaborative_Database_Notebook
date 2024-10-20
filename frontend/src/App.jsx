@@ -6,6 +6,7 @@ import Sidebar from './components/Sidebar';
 import Notebook from './components/Notebook';
 import Login from './components/Login';
 import Register from './components/Register';
+import DashboardStats from './components/DashboardStats';
 
 const App = () => {
   const [user, setUser] = useState(null);
@@ -154,9 +155,9 @@ const App = () => {
         <div className="content">
           <Header user={user} handleLogout={handleLogout} />
           <Routes>
-            <Route path="/" element={!user ? <Login onLogin={handleLogin} /> : <Navigate to="/" />} />
-            <Route path="/login" element={!user ? <Login onLogin={handleLogin} /> : <Navigate to="/" />} />
-            <Route path="/register" element={!user ? <Register /> : <Navigate to="/" />} />
+            <Route path="/" element={!user ? <><Login onLogin={handleLogin} /><DashboardStats /></> : <Navigate to="/" />} />
+            <Route path="/login" element={!user ? <><Login onLogin={handleLogin} /><DashboardStats /></> : <Navigate to="/" />} />
+            <Route path="/register" element={!user ? <><Register /><DashboardStats /></> : <Navigate to="/" />} />
             <Route 
               path="/notebook/:id" 
               element={user ? <Notebook notebooks={notebooks} onUpdateNotebook={handleUpdateNotebook} /> : <Navigate to="/login" />} 
